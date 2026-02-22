@@ -16,6 +16,12 @@ class LLMClient {
         return this.client
     }
 
+    async close(){
+        if(this.client){
+            this.client = null
+        }
+    }
+
     // async chatCompletion(message){
     //     const client = this.getClient();
 
