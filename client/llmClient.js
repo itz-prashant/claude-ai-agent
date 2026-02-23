@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-class LLMClient {
+export class LLMClient {
 
     constructor(){
         this.client = null;
@@ -22,23 +22,35 @@ class LLMClient {
         }
     }
 
-    // async chatCompletion(message){
-    //     const client = this.getClient();
+    async chatCompletion(messages, stream=true){
+        const client = this.getClient()
 
-    //     const response = await client.chat.completions.create({
-    //         model: "llama3:latest",
-    //         messages: message
-    //     })
-    //     console.log(JSON.stringify(response, null, 2));
-    //     console.log("FULL RESPONSE:");
-    //     // console.log(response);
-    //     // console.log(response.choices[0].message);
-    //     return response;
+        const kwargs = {
+            model: "llama3:latest", //"codellama:13b"
+            messages: messages,
+            stream: stream
+        }
+        if(stream){
+            return this._streamResponse(client, messages)
+        }else{
+            return this._nonStreamResponse(client, kwargs)
+        }
+    }
 
-    // }
+    async _streamResponse(){
+
+    }
+
+    async _nonStreamResponse(client, kwargs){
+        const response = await client.chat.completions.create({...kwargs})
+        const choice = response.choice[0]
+        const message = choice.message
+
+        let text = null
+        if(message.content){
+            text = 
+        }
+        console.log(JSON.stringify(response))
+        console.log(response)
+    }
 }
-
-const llm = new LLMClient()
-await llm.chatCompletion([
-    { role: "user", content: "Hello" }
-])
