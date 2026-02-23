@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import {StreamEventSchema, TextDeltaSchema, TokenUsageSchema } from "./response.js";
 
 export class LLMClient {
 
@@ -22,19 +23,21 @@ export class LLMClient {
         }
     }
 
-    async chatCompletion(messages, stream=true){
+    async *chatCompletion (messages, stream=true){
         const client = this.getClient()
 
         const kwargs = {
-            model: "llama3:latest", //"codellama:13b"
+            model: "codellama:13b", // "llama3:latest"
             messages: messages,
             stream: stream
         }
         if(stream){
             return this._streamResponse(client, messages)
         }else{
-            return this._nonStreamResponse(client, kwargs)
+            const event = await this._nonStreamResponse(client, kwargs)
+            yield event
         }
+        return
     }
 
     async _streamResponse(){
@@ -43,14 +46,36 @@ export class LLMClient {
 
     async _nonStreamResponse(client, kwargs){
         const response = await client.chat.completions.create({...kwargs})
-        const choice = response.choice[0]
+        const choice = response.choices[0]
         const message = choice.message
 
-        let text = null
+        let text_delta = null
+        let usage = null
         if(message.content){
-            text = 
+            text_delta = TextDeltaSchema.parse({
+                content: message.content
+            })
         }
-        console.log(JSON.stringify(response))
-        console.log(response)
+
+        if(response.usage){
+            usage = TokenUsageSchema.parse({
+                prompt_tokens: response.usage.prompt_tokens ?? 0,
+                completion_tokens: response.usage.completion_tokens ?? 0,
+                total_tokens: response.usage.total_tokens ?? 0,
+                cached_tokens: response.usage?.prompt_tokens_details?.cached_tokens 
+                ?? response.usage?.cached_tokens 
+                ?? 0
+            })
+        }else{
+            usage = null
+        }
+
+        return StreamEventSchema.parse({
+            type: "message_complete",
+            text_delta,
+            finish_reason: choice.finish_reason,
+            usage
+
+        })
     }
 }

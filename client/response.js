@@ -17,33 +17,33 @@ export const TokenUsageSchema = z.object({
   cached_tokens: z.number().int().nonnegative().default(0),
 })
 
-// export const StreamEventSchema = z.object({
-//     type: EventTypeSchema,
-//     text_delta: TextDeltaSchema.optional(),
-//     error: z.string().optional(),
-//     finish_reason: z.string().optional(),
-//     usage: TokenUsageSchema.optional()
-// })
-
-export const StreamEventSchema = z.discriminatedUnion("type", [
-
-  z.object({
-    type: z.literal("text_delta"),
-    text_delta: TextDeltaSchema
-  }),
-
-  z.object({
-    type: z.literal("message_complete"),
+export const StreamEventSchema = z.object({
+    type: EventTypeSchema,
+    text_delta: TextDeltaSchema.optional(),
+    error: z.string().optional(),
     finish_reason: z.string().optional(),
     usage: TokenUsageSchema.optional()
-  }),
+})
 
-  z.object({
-    type: z.literal("error"),
-    error: z.string()
-  })
+// export const StreamEventSchema = z.discriminatedUnion("type", [
 
-])
+//   z.object({
+//     type: z.literal("text_delta"),
+//     text_delta: TextDeltaSchema
+//   }),
+
+//   z.object({
+//     type: z.literal("message_complete"),
+//     finish_reason: z.string().optional(),
+//     usage: TokenUsageSchema.optional()
+//   }),
+
+//   z.object({
+//     type: z.literal("error"),
+//     error: z.string()
+//   })
+
+// ])
 
 export function addTokenUsage(a, b){
     const parsedA = TokenUsageSchema.parse(a)
