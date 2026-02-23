@@ -6,12 +6,12 @@ async function main(){
     const messages = [
         {
             role: "user",
-            content: "Hii whats's up"
+            content: "Hii"
         }
     ]
     // await client.chatCompletion(messages, false)
-    for await (const event of client.chatCompletion(messages, false)) {
-        console.log(event)
+    for await (const event of client.chatCompletion(messages, true)) {
+        console.log(JSON.stringify(event))
     }
     console.log("Done")
 }

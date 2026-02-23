@@ -27,12 +27,15 @@ export class LLMClient {
         const client = this.getClient()
 
         const kwargs = {
-            model: "codellama:13b", // "llama3:latest"
+            model: "codellama:13b",
             messages: messages,
             stream: stream
         }
         if(stream){
-            return this._streamResponse(client, messages)
+            for await (const event of this._streamResponse(client, kwargs)){
+                yield event
+            }
+            // yield* this._streamResponse(client, kwargs) **shortcut**
         }else{
             const event = await this._nonStreamResponse(client, kwargs)
             yield event
@@ -40,8 +43,45 @@ export class LLMClient {
         return
     }
 
-    async _streamResponse(){
+    async *_streamResponse(client, kwargs){
+        const response = await client.chat.completions.create({...kwargs})
+        let usage = undefined;
+        let finish_reason = null 
 
+        for await (const chunk of response){
+            if(chunk.usage){
+                    usage = TokenUsageSchema.parse({
+                    prompt_tokens: chunk.usage.prompt_tokens ?? 0,
+                    completion_tokens: chunk.usage.completion_tokens ?? 0,
+                    total_tokens: chunk.usage.total_tokens ?? 0,
+                    cached_tokens: chunk.usage?.prompt_tokens_details?.cached_tokens 
+                    ?? chunk.usage?.cached_tokens 
+                    ?? 0
+                })
+            }
+            if(!chunk.choices){
+                continue;
+            }
+            const choice = chunk.choices[0]
+            const delta = choice.delta
+
+            if(choice.finish_reason){
+                finish_reason = choice.finish_reason
+            }
+
+            if (delta?.content){
+                yield StreamEventSchema.parse({
+                    type: "text_delta",
+                    text_delta: TextDeltaSchema.parse({content: delta.content})
+                })
+            }
+        }
+
+        yield StreamEventSchema.parse({
+            type: "message_complete",
+            finish_reason,
+            usage
+        })
     }
 
     async _nonStreamResponse(client, kwargs){
