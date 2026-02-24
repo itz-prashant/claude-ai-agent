@@ -1,6 +1,6 @@
 import * as z from "zod"
 
-export const EventTypeSchema = z.enum([
+export const StreamEventTypeSchema = z.enum([
     "text_delta",
     "message_complete",
     "error"
@@ -18,7 +18,7 @@ export const TokenUsageSchema = z.object({
 })
 
 export const StreamEventSchema = z.object({
-    type: EventTypeSchema,
+    type: StreamEventTypeSchema,
     text_delta: TextDeltaSchema.optional(),
     error: z.string().optional(),
     finish_reason: z.string().optional(),

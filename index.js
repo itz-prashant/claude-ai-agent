@@ -1,7 +1,36 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { LLMClient } from "./client/llmClient.js";
+import { Agent } from "./agent/agent.js";
 
+export class CLI {
+    constructor(){
+        this.agent = null
+    }
+
+    async runSingle(message){
+        const agent = new Agent();
+
+        try {
+            await agent.enter();
+            this.agent = agent
+            await this.#processMessage(message)
+        }finally{
+            await agent.exit()
+        }
+    }
+
+    async #processMessage(message){
+        if(!this.agent){
+            return null
+        }else{
+            for await (const event of this.agent.run(message)){
+                if(event.type == "text_delta"){
+                    const content = event.data.content ?? ""
+                }
+            }
+        }
+    }
+}
 
 async function main() {
   yargs(hideBin(process.argv)).command(
@@ -9,18 +38,16 @@ async function main() {
     "Run chat",
     () => {},
     async (argv) => {
-      const client = new LLMClient();
-      const messages = [
-        {
-          role: "user",
-          content: argv.prompt,
-        },
-      ];
-      // await client.chatCompletion(messages, false)
-      for await (const event of client.chatCompletion(messages, true)) {
-        console.log(JSON.stringify(event));
+      const cli = new CLI();
+    //   const messages = [
+    //     {
+    //       role: "user",
+    //       content: argv.prompt,
+    //     },
+    //   ];
+      if(argv.prompt){
+        await cli.runSingle(argv.prompt)
       }
-      console.log("Done");
     }
   )
   .parse()
