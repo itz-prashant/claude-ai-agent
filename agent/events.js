@@ -1,5 +1,5 @@
 import * as z from "zod"
-import { TokenUsageSchema } from "../client/response";
+import { TokenUsageSchema } from "../client/response.js";
 
 export const AgentEventTypeSchema = z.enum([
     "agent_start",
@@ -11,7 +11,7 @@ export const AgentEventTypeSchema = z.enum([
 
 const AgentEventSchema = z.object({
     type: AgentEventTypeSchema,
-    data: z.record(z.any()).default({}),
+    data: z.record(z.string(), z.any()).default({})
 })
 
 export class AgentEvent {

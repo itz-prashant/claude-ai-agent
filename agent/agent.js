@@ -1,5 +1,5 @@
-import { LLMClient } from "../client/llmClient";
-import { AgentEvent } from "./events";
+import { LLMClient } from "../client/llmClient.js";
+import { AgentEvent } from "./events.js";
 
 export class Agent {
 

@@ -26,6 +26,7 @@ export class CLI {
             for await (const event of this.agent.run(message)){
                 if(event.type == "text_delta"){
                     const content = event.data.content ?? ""
+                    console.log("content", content)
                 }
             }
         }
@@ -46,7 +47,8 @@ async function main() {
     //     },
     //   ];
       if(argv.prompt){
-        await cli.runSingle(argv.prompt)
+        const res = await cli.runSingle(argv.prompt)
+        console.log("response", res)
       }
     }
   )
