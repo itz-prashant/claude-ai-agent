@@ -1,10 +1,13 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { Agent } from "./agent/agent.js";
+import { getTuiConsole, TUI } from "./ui/tui.js";
 
+const tuiConsole = getTuiConsole()
 export class CLI {
     constructor(){
         this.agent = null
+        this.tui = new TUI(tuiConsole)
     }
 
     async runSingle(message){
@@ -13,7 +16,7 @@ export class CLI {
         try {
             await agent.enter();
             this.agent = agent
-            await this.#processMessage(message)
+            return await this.#processMessage(message)
         }finally{
             await agent.exit()
         }
@@ -26,7 +29,7 @@ export class CLI {
             for await (const event of this.agent.run(message)){
                 if(event.type == "text_delta"){
                     const content = event.data.content ?? ""
-                    console.log("content", content)
+                    this.tui.streamAssistantDelta(content)
                 }
             }
         }
@@ -46,9 +49,12 @@ async function main() {
     //       content: argv.prompt,
     //     },
     //   ];
-      if(argv.prompt){
+    
+    if(argv.prompt){
         const res = await cli.runSingle(argv.prompt)
-        console.log("response", res)
+        if (res == null) {
+            process.exit(1);
+        }
       }
     }
   )
