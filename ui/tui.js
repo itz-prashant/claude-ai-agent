@@ -41,6 +41,28 @@ export class TUI {
 
   constructor(consoleInstance = null){
     this.tuiConsole = consoleInstance ?? getTuiConsole()
+    this.assistantStreamOpen = false;
+  }
+
+  beginAssistant(){
+    this.tuiConsole("\n")
+    const width = this.tuiConsole.width || 80
+
+    const label = " Assistant"
+    const lineLength = Math.max(0, Math.floor((width - label.length) / 2))
+
+    const line = "-".repeat(lineLength);
+
+    AGENT_THEME.assistant(line + label + line)
+    this.tuiConsole("\n")
+    this.assistantStreamOpen = true;
+  }
+
+  endAssistant(){
+    if(this.assistantStreamOpen){
+      this.tuiConsole("\n")
+    }
+    this.assistantStreamOpen = false
   }
 
   streamAssistantDelta(content){

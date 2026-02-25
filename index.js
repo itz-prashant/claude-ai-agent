@@ -25,14 +25,29 @@ export class CLI {
     async #processMessage(message){
         if(!this.agent){
             return null
-        }else{
-            for await (const event of this.agent.run(message)){
-                if(event.type == "text_delta"){
-                    const content = event.data.content ?? ""
-                    this.tui.streamAssistantDelta(content)
+        }
+        let assistantStreaming
+        let finalResponse = null
+        for await (const event of this.agent.run(message)){
+            if(event.type == "text_delta"){
+                const content = event.data.content ?? ""
+                if(!assistantStreaming){
+                    this.tui.beginAssistant()
+                    assistantStreaming = true
                 }
+                this.tui.streamAssistantDelta(content)
+            }else if(event.type == "text_complete"){
+                finalResponse = event.data.content
+                if(assistantStreaming){
+                    this.tui.endAssistant()
+                    assistantStreaming = false
+                }
+            }else if(event.type == "agent_error"){
+                const error = event.data.error || "Unknown error"
+                tuiConsole.brightRed.bold("\nError- " + (error));
             }
         }
+        return finalResponse
     }
 }
 
@@ -49,7 +64,7 @@ async function main() {
     //       content: argv.prompt,
     //     },
     //   ];
-    
+
     if(argv.prompt){
         const res = await cli.runSingle(argv.prompt)
         if (res == null) {
