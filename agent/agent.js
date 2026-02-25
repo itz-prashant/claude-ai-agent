@@ -1,18 +1,22 @@
 import { LLMClient } from "../client/llmClient.js";
+import { ContextManager } from "../context/manager.js";
 import { AgentEvent } from "./events.js";
 
 export class Agent {
 
     constructor(){
         this.client = new LLMClient()
-
+        this.contextManager = new ContextManager()
     }
 
     async *run(message){
         let finalResponse
         yield AgentEvent.agentStart(message)
 
-        for await(const event of this.#agenticLoop(message)){
+        // add user message to context
+        this.contextManager.addUserMessage(message)
+
+        for await(const event of this.#agenticLoop()){
             yield event
             if(event.type == "text_complete"){
                 finalResponse = event.data.content
@@ -22,14 +26,10 @@ export class Agent {
         yield AgentEvent.agentEnd(finalResponse)
     }
 
-    async *#agenticLoop(message){
-        const messages = [
-            { role: "user", content: message }
-        ]
-
+    async *#agenticLoop(){
         let responseText = ""
 
-        for await(const event of this.client.chatCompletion(messages, true)){
+        for await(const event of this.client.chatCompletion(this.contextManager.getMessages(), true)){
             // console.log(JSON.stringify(event));
             if(event.type == "text_delta"){
                 const content = event.text_delta.content
@@ -41,6 +41,7 @@ export class Agent {
                 )
             }
         }
+        this.contextManager.addAssistantMessage(responseText || null)
         if(responseText){
             yield AgentEvent.textComplete(responseText)
         }
