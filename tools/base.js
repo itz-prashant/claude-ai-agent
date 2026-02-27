@@ -35,7 +35,10 @@ export const ToolResultSchema = z.object({
     success: z.boolean(),
     output: z.string(),
     error: z.string().nullable().optional(),
-    metadata: z.record(z.any()).optional()
+    metadata: z.record(z.any()).optional(),
+    truncated: z.boolean().default(false),
+
+    error: z.string().nullable().optional(),
 })
 
 export const ToolConfirmationSchema = z.object({
@@ -43,6 +46,23 @@ export const ToolConfirmationSchema = z.object({
     params: z.record(z.any()),
     description: z.string()
 })
+
+export function errorResult(error, output = "", extra = {}) {
+    return ToolResultSchema.parse({
+        success: false,
+        output,
+        error,
+        ...extra
+    })
+}
+export function successResult(output = "", extra = {}) {
+    return ToolResultSchema.parse({
+        success: true,
+        output,
+        error: null,
+        ...extra
+    })
+}
 
 export class Tool{
     name= "base_tool";
