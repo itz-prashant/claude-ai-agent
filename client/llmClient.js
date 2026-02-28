@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import {
+  parseToolCallArguments,
   StreamEventSchema,
   TextDeltaSchema,
   TokenUsageSchema,
@@ -27,14 +28,32 @@ export class LLMClient {
     }
   }
 
-  async *chatCompletion(messages, stream = true) {
+  buildTools(tools) {
+    return tools.map(tool => ({
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description || "",
+        parameters: tool.parameters || {
+          type: "object",
+          properties: {}
+        }
+      }
+    }))
+  }
+
+  async *chatCompletion(messages,tools=undefined, stream = true) {
     const client = this.getClient();
 
     const kwargs = {
-      model: "codellama:13b",
+      model: "gpt-oss:20b",
       messages: messages,
       stream: stream,
     };
+    if(tools && tools.length > 0){
+      kwargs.tools = this.buildTools(tools)
+      kwargs.tool_choice = "auto"
+    }
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
         if (stream) {
@@ -86,8 +105,10 @@ export class LLMClient {
 
   async *_streamResponse(client, kwargs) {
     const response = await client.chat.completions.create({ ...kwargs });
+
     let usage = undefined;
     let finish_reason = null;
+    let toolCalls = {}
 
     for await (const chunk of response) {
       if (chunk.usage) {
@@ -117,7 +138,58 @@ export class LLMClient {
           text_delta: TextDeltaSchema.parse({ content: delta.content }),
         });
       }
+     if (delta?.tool_calls) {
+        for(const toolCallDelta of delta?.tool_calls){
+          const idx = toolCallDelta.idx
+
+          if(!toolCalls[idx]){
+            toolCalls[idx]={
+              id: toolCallDelta.id || "",
+              name: "",
+              arguments:""
+            }
+          }
+          if(toolCallDelta.function){
+            if(toolCallDelta.function.name){
+              toolCalls[idx].name = toolCallDelta.function.name;
+
+              yield StreamEventSchema.parse({
+                type: "tool_call_start",
+                tool_call_delta: {
+                  call_id: toolCalls[idx].id,
+                  name: toolCallDelta.function?.name,
+                  arguments_delta: "",
+                },
+              })
+            }
+          }
+
+          if (toolCallDelta.function?.arguments) {
+            toolCalls[idx].arguments += toolCallDelta.function.arguments;
+
+            yield {
+              type: "tool_call_delta",
+              tool_call_delta: {
+                call_id: toolCalls[idx].id,
+                name: toolCallDelta.function?.name,
+                arguments_delta: toolCallDelta.function.arguments,
+              },
+            };
+          }
+        }
+      }
     }
+
+    for (const [idx, tc] of Object.entries(toolCalls)) {
+        yield {
+          type: "tool_call_complete",
+          tool_call: {
+            call_id: tc.id,
+            name: tc.name,
+            arguments: parseToolCallArguments(tc.arguments),
+          },
+        };
+      }
 
     yield StreamEventSchema.parse({
       type: "message_complete",
@@ -133,6 +205,17 @@ export class LLMClient {
 
     let text_delta = null;
     let usage = null;
+    let toolCalls = []
+     if(message.tool_calls){
+        for(const tc of message.tool_calls){
+          toolCalls.push({
+            call_id: tc.id,
+            name: tc.function?.name,
+            arguments: parseToolCallArguments(tc.function?.arguments),
+          })
+        }
+    }
+
     if (message.content) {
       text_delta = TextDeltaSchema.parse({
         content: message.content,

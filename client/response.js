@@ -3,7 +3,10 @@ import * as z from "zod"
 export const StreamEventTypeSchema = z.enum([
     "text_delta",
     "message_complete",
-    "error"
+    "error",
+    "tool_call_start",
+    "tool_call_delta",
+    "tool_call_complete",
 ])
 
 export const TextDeltaSchema = z.object({
@@ -17,33 +20,27 @@ export const TokenUsageSchema = z.object({
   cached_tokens: z.number().int().nonnegative().default(0),
 })
 
+const ToolCallDeltaSchema = z.object({
+    call_id: z.string(),
+    name: z.string().optional(),
+    arguments_delta: z.string().default("")
+})
+
+export const ToolCall  = z.object({
+    call_id: z.string(),
+    name: z.string().optional(),
+    arguments: z.string().default("")
+})
+
 export const StreamEventSchema = z.object({
     type: StreamEventTypeSchema,
     text_delta: TextDeltaSchema.optional(),
     error: z.string().optional(),
     finish_reason: z.string().optional(),
-    usage: TokenUsageSchema.optional()
+    usage: TokenUsageSchema.optional(),
+    tool_call_delta: ToolCallDeltaSchema.optional(),
+    tool_call: ToolCall.optional(),
 })
-
-// export const StreamEventSchema = z.discriminatedUnion("type", [
-
-//   z.object({
-//     type: z.literal("text_delta"),
-//     text_delta: TextDeltaSchema
-//   }),
-
-//   z.object({
-//     type: z.literal("message_complete"),
-//     finish_reason: z.string().optional(),
-//     usage: TokenUsageSchema.optional()
-//   }),
-
-//   z.object({
-//     type: z.literal("error"),
-//     error: z.string()
-//   })
-
-// ])
 
 export function addTokenUsage(a, b){
     const parsedA = TokenUsageSchema.parse(a)
@@ -55,4 +52,16 @@ export function addTokenUsage(a, b){
         total_tokens: parsedA.total_tokens + parsedB.total_tokens,
         cached_tokens: parsedA.cached_tokens + parsedB.cached_tokens,
     }
+}
+
+export function parseToolCallArguments(argumentsStr) {
+  if (!argumentsStr) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(argumentsStr);
+  } catch (err) {
+    return { raw_arguments: argumentsStr };
+  }
 }

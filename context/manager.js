@@ -10,7 +10,7 @@ const MessageItemSchema = z.object({
 
 
 export class ContextManager {
-    constructor(modelName= "codellama:13b"){
+    constructor(modelName= "gpt-oss:20b"){
         this.systemPrompt = getSystemPrompt()
         this.modelName = modelName
         this.messages = []

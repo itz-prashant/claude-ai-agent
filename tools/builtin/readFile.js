@@ -10,30 +10,30 @@ export const ReadFileParamsSchema = z.object({
     .describe(
       "Path to the file to read (relative to working directory or absolute)"
     ),
-  offset: z
-    .number()
-    .int()
-    .min(1, "Offset must be >= 1")
-    .default(1)
-    .describe("Line number to start reading from (1-based). Defaults to 1"),
+  // offset: z
+  //   .number()
+  //   .int()
+  //   .min(1, "Offset must be >= 1")
+  //   .default(1)
+  //   .describe("Line number to start reading from (1-based). Defaults to 1"),
 
-  limit: z
-    .number()
-    .int()
-    .min(1, "Limit must be >= 1")
-    .nullable()
-    .optional()
-    .describe(
-      "Maximum number of lines to read. If not specified, reads entire file."
-    ),
+  // limit: z
+  //   .number()
+  //   .int()
+  //   .min(1, "Limit must be >= 1")
+  //   .nullable()
+  //   .optional()
+  //   .describe(
+  //     "Maximum number of lines to read. If not specified, reads entire file."
+  //   ),
 });
 
 export class ReadFileTool extends Tool {
   name = "read_file";
-  description = (description =
-    "Read the contents of a text file. Returns the file content with line numbers. " +
-    "For large files, use offset and limit to read specific portions. " +
-    "Cannot read binary files (images, executables, etc.).");
+  description =
+    "Read the contents of a text file. Returns the file content with line numbers. "
+    "For large files, use offset and limit to read specific portions. "
+    "Cannot read binary files (images, executables, etc.).";
 
   kind = ToolKind.READ;
 
@@ -115,14 +115,14 @@ export class ReadFileTool extends Tool {
     })
 
     let output = formattedLines.join("\n")
-    const tokenCount = countTokens(output, model="codellama:13b")
+    const tokenCount = countTokens(output, "gpt-oss:20b")
 
     let truncated = false
 
     if(tokenCount > this.MAX_OUTPUT_TOKEN){
       output = truncateText(
         output,
-        model= "codellama:13b",
+        "gpt-oss:20b",
         this.MAX_OUTPUT_TOKEN,
         suffix= `\n... [truncated ${totalLines} total lines]`
       )
@@ -147,7 +147,7 @@ export class ReadFileTool extends Tool {
       output=output,
       truncated=truncated,
       metadata={
-          "path": str(path),
+          "path": String(path),
           "total_lines": totalLines,
           "shown_start": startIdx + 1,
           "shown_end": endIdx,
